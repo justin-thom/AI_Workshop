@@ -5,7 +5,7 @@
 ### Step 1: Start the Game Builder
 In the terminal at the bottom, type:
 ```bash
-python chat_game.py
+python build_game.py
 ```
 
 ### Step 2: Open Your Game in a Browser
