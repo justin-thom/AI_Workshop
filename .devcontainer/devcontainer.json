@@ -1,0 +1,14 @@
+{
+  "name": "AI Game Workshop",
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "features": {},
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ritwickdey.liveserver"
+      ]
+    }
+  },
+  "forwardPorts": [5500],
+  "postCreateCommand": "pip install anthropic"
+}
