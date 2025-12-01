@@ -1,7 +1,12 @@
-# build_game.py
 import anthropic
 import os
+import sys
 from pathlib import Path
+
+# --- CONFIGURATION ---
+# We use Claude Sonnet 4.5 as it is the current robust model for coding.
+# If this ever errors with a 404, check Anthropic's docs for the latest model name.
+MODEL_NAME = "claude-sonnet-4-5-20250929" 
 
 def extract_code_and_summary(response):
     """
@@ -35,50 +40,70 @@ def extract_code_and_summary(response):
         # No code blocks found
         return response.strip(), ""
 
+def save_game(code):
+    """Saves the code to index.html with error handling"""
+    try:
+        with open("index.html", "w", encoding="utf-8") as f:
+            f.write(code)
+        return True
+    except Exception as e:
+        print(f"❌ Error saving file: {e}")
+        return False
+
 def main():
+    # 1. Setup API Key
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
-        print("ERROR: API key not set!")
-        print("Please run: export ANTHROPIC_API_KEY='your-key-here'")
+        print("\n❌ ERROR: API key not set!")
+        print("Please run this command in the terminal first:")
+        print("export ANTHROPIC_API_KEY='your-key-here'\n")
         return
     
     client = anthropic.Anthropic(api_key=api_key)
     conversation_history = []
     
+    # 2. Welcome Message
     print("=" * 60)
-    print("🎮 AI Game Builder - Interactive Mode")
+    print("🎮 AI Game Builder - Workshop Mode")
     print("=" * 60)
     print()
     print("Commands:")
-    print("  - Just type what you want to add/change")
-    print("  - 'show' - see your current HTML")
-    print("  - 'restart' - start a brand new game")
-    print("  - 'quit' - exit")
+    print("  - Just type what you want to build or change")
+    print("  - 'show'    - see your current HTML code")
+    print("  - 'restart' - delete everything and start fresh")
+    print("  - 'quit'    - exit the builder")
     print()
-    print("Your game auto-saves to index.html after each change!")
-    print("Keep your browser open and refresh to see updates.")
-    print()
+    print("👉 Tip: Keep 'index.html' open in your browser and refresh to see changes.")
     print("=" * 60)
     print()
     
-    # Load existing game if it exists
+    # 3. Load or Start Fresh
     if Path("index.html").exists():
-        with open("index.html", "r", encoding="utf-8") as f:
-            current_game = f.read()
-        print("📄 Loaded existing game from index.html")
-        print()
+        try:
+            with open("index.html", "r", encoding="utf-8") as f:
+                current_game = f.read()
+            print("📄 Loaded existing game from index.html")
+        except:
+            current_game = ""
+            print("🆕 Starting fresh!")
     else:
         current_game = ""
         print("🆕 Starting fresh! What game would you like to build?")
-        print()
+    print()
     
+    # 4. Main Loop
     while True:
-        user_input = input("You: ").strip()
-        
+        try:
+            user_input = input("You: ").strip()
+        except KeyboardInterrupt:
+            print("\n👋 Exiting...")
+            break
+            
         if not user_input:
             continue
             
-        if user_input.lower() == 'quit':
+        # Handle Commands
+        if user_input.lower() in ['quit', 'exit']:
             print("\n👋 Bye! Your game is saved in index.html")
             break
             
@@ -91,98 +116,108 @@ def main():
         if user_input.lower() == 'restart':
             current_game = ""
             conversation_history = []
-            print("\n🔄 Starting fresh! What game would you like to build?\n")
+            print("\n🔄 Memory wiped! What game would you like to build first?\n")
             continue
         
-        # Build the prompt with context
+        # 5. Construct System Prompt
+        # We enforce specific rules to make the game self-contained and robust
+        base_instructions = """
+        CRITICAL RULES FOR GENERATING CODE:
+        1. Output a SINGLE, COMPLETE HTML file.
+        2. ALL CSS and JavaScript must be INLINE (inside <style> and <script> tags).
+        3. DO NOT use external files (no style.css, script.js, or external images).
+        4. Use CSS shapes (rectangles, circles) or emoji for game graphics. DO NOT use <img> tags with placeholder URLs.
+        5. Make the game playable immediately with clear on-screen instructions.
+        6. Add console.log() statements for debugging.
+        """
+
         if current_game:
-            system_context = f"""You are helping build an HTML game. Here's the current code:
+            system_context = f"""You are an expert game developer helper. 
+{base_instructions}
+
+Here is the user's current game code:
 ```html
 {current_game}
 ```
 
-The user wants to modify it. 
+The user wants to modify this game. 
+- Explain briefly what you are changing.
+- Then provide the FULL, UPDATED HTML file (do not provide partial snippets).
+- Keep existing features working unless asked to remove them.
 
-First, briefly explain what you're going to do (1-2 sentences).
-Then provide the COMPLETE updated HTML file with their requested changes.
-Include all the existing code plus the new feature.
-
-Format your response like this:
-[Your brief explanation of what you're adding]
+Format:
+[Brief explanation]
 ```html
-[Complete HTML code]
+[Full HTML code]
 ```
-
-CRITICAL REQUIREMENTS:
-1. Always show clear instructions on screen (e.g., "Press SPACE to start")
-2. Make interactive elements obvious (big buttons, clear text)
-3. Provide immediate visual feedback for all user actions
-4. If the game has a "waiting to start" state, make it VERY obvious how to start
-5. Add console.log() statements for debugging"""
+"""
         else:
-            system_context = """You are helping build an HTML game from scratch. 
+            system_context = f"""You are an expert game developer helper.
+{base_instructions}
 
-First, briefly explain what you're going to create (1-2 sentences).
-Then create a complete, working HTML game based on the user's request.
-Make it simple, fun, and self-contained (all CSS/JS inline).
+The user wants to create a new game.
+- Explain briefly what you are building.
+- Provide a COMPLETE, working HTML game.
 
-Format your response like this:
-[Your brief explanation]
+Format:
+[Brief explanation]
 ```html
-[Complete HTML code]
+[Full HTML code]
 ```
-
-Make sure to include clear on-screen instructions for how to play."""
+"""
         
-        # Add to conversation
+        # Add to history
         conversation_history.append({
             "role": "user", 
             "content": f"{system_context}\n\nUser request: {user_input}"
         })
         
-        print("\n🤖 Claude is thinking...\n")
+        print("\n🤖 Claude is coding... (this might take 10-20 seconds)\n")
         
         try:
             message = client.messages.create(
-                model="claude-3-5-sonnet-20241022",  # Fixed model name
-                max_tokens=3000,
+                model=MODEL_NAME,
+                max_tokens=4000, # Increased for larger games
                 messages=conversation_history
             )
             
             response = message.content[0].text
             
-            # Add Claude's response to history
+            # Save Assistant response to history
             conversation_history.append({
                 "role": "assistant",
                 "content": response
             })
             
-            # Extract code and summary
+            # Extract
             code, summary = extract_code_and_summary(response)
             
-            # Show Claude's explanation if there is one
             if summary:
-                print("💬 Claude says:")
-                print(f"   {summary}")
-                print()
+                print(f"💬 Claude says: {summary}\n")
             
-            # Save the code
-            current_game = code
-            with open("index.html", "w", encoding="utf-8") as f:
-                f.write(code)
+            # --- SAFETY CHECK ---
+            # Only overwrite the file if we actually got valid HTML
+            if "<!DOCTYPE html>" in code or "<html" in code.lower():
+                current_game = code
+                if save_game(code):
+                    print("✅ GAME UPDATED! Refresh your browser now.")
+            else:
+                print("⚠️  Claude replied, but didn't return any code.")
+                print("   (Your previous game file was NOT overwritten)")
+                print("   Check the message above to see if Claude has a question for you.")
             
-            print("✅ Updated index.html!")
-            print("💡 Refresh your browser to see the changes")
             print()
             
         except anthropic.APIError as e:
-            print(f"❌ API Error: {e}")
-            print("Check your API key and try again.\n")
-            # Remove the failed user message from history
+            print(f"\n❌ API Error: {e}")
+            if "not_found_error" in str(e):
+                print("   -> Hint: The model name might be outdated or the API key is invalid.")
+            print("   Check your API key and try again.\n")
+            # Remove the failed message so we can retry
             conversation_history.pop()
+            
         except Exception as e:
-            print(f"❌ Error: {e}\n")
-            # Remove the failed user message from history
+            print(f"\n❌ Error: {e}\n")
             if conversation_history:
                 conversation_history.pop()
 
