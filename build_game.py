@@ -113,9 +113,6 @@ Remember: Output a COMPLETE, working HTML file."""
 def main():
     # 1. Setup API Key
     api_key = os.environ.get("ANTHROPIC_API_KEY")
-def main():
-    # 1. Setup API Key
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         print("\n❌ ERROR: API key not set!")
         print("Please run this command in the terminal first:")
