@@ -113,11 +113,15 @@ Remember: Output a COMPLETE, working HTML file."""
 def main():
     # 1. Setup API Key
     api_key = os.environ.get("ANTHROPIC_API_KEY")
-if not api_key:
-    print("\n❌ ERROR: API key not set!")
-    print("Please run this command in the terminal first:")
-    print("  export ANTHROPIC_API_KEY='your-key-here'\n")
-    return
+def main():
+    # 1. Setup API Key
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        print("\n❌ ERROR: API key not set!")
+        print("Please run this command in the terminal first:")
+        print("  export ANTHROPIC_API_KEY='your-key-here'\n")
+        return
+    
     client = anthropic.Anthropic(api_key=api_key)
     
     # Conversation history - we keep this lean (see build_user_message)
