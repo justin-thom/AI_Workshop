@@ -5,7 +5,7 @@ from pathlib import Path
 
 # --- CONFIGURATION ---
 # Claude Opus 4.5 - the most capable model for complex reasoning and code generation
-MODEL_NAME = "claude-opus-4-5-20251101"
+MODEL_NAME = "claude-sonnet-4-5-20250929"
 
 # System prompt kept separate from conversation history to save tokens
 SYSTEM_PROMPT = """You are an expert game developer helping someone build browser games.
@@ -114,10 +114,17 @@ def main():
     # 1. Setup API Key
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
-        print("\n❌ ERROR: API key not set!")
-        print("Please run this command in the terminal first:")
-        print("  export ANTHROPIC_API_KEY='your-key-here'\n")
-        return
+        print("No API key found.")
+        print("Paste your API key below (it won't be displayed):\n")
+        api_key = input("> ").strip()
+        
+        # Clean up common copy-paste issues
+        api_key = api_key.replace('"', '').replace("'", '')  # Remove quotes
+        api_key = api_key.strip()  # Remove whitespace
+        
+        if not api_key:
+            print("\n❌ No key entered. Exiting.\n")
+            return
     
     client = anthropic.Anthropic(api_key=api_key)
     
