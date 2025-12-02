@@ -112,12 +112,7 @@ Remember: Output a COMPLETE, working HTML file."""
 
 def main():
     # 1. Setup API Key
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        print("\n❌ ERROR: API key not set!")
-        print("Please run this command in the terminal first:")
-        print("  export ANTHROPIC_API_KEY='your-key-here'\n")
-        return
+    api_key = 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
     
     client = anthropic.Anthropic(api_key=api_key)
     
