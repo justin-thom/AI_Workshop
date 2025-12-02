@@ -112,7 +112,7 @@ Remember: Output a COMPLETE, working HTML file."""
 
 def main():
     # 1. Setup API Key
-    api_key = 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
+    api_key = "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"
     
     client = anthropic.Anthropic(api_key=api_key)
     
